@@ -1,3 +1,9 @@
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+
+
+
 #include  <stdio.h>
 #include  <stdlib.h>
 #include  <sys/stat.h>
@@ -8,10 +14,22 @@
 #include  <sys/types.h>
 #include  <sys/ipc.h>
 #include  <sys/shm.h>
+#include  <sys/syscall.h>
+
 
 #include  "thonk.h"
 
-void  main(int  argc, char *argv[])
+#ifndef __NR_pidfd_open
+#define __NR_pidfd_open 434   /* System call # on most architectures */
+#endif
+#ifndef __NR_pidfd_getfd
+#define __NR_pidfd_getfd 438   /* System call # on most architectures */
+#endif
+
+//    int return syscall(__NR_pidfd_open, pid, flags);
+//    int return syscall(__NR_pidfd_getfd, pidfd, getfd, flags);
+
+int  main(int  argc, char *argv[])
 {
      bool first = false;
      key_t          MailKey;
@@ -64,6 +82,8 @@ void  main(int  argc, char *argv[])
 	  if (first) {
 
                MailPtr->condition  = UNPREPARED;
+               MailPtr->corepid  = 0;
+               MailPtr->corefd  = 0;
                strncpy(MailPtr->data, argv[1], 63);
                MailPtr->data[63] = '\0';
                MailPtr->condition = PREPARED;
@@ -79,6 +99,16 @@ void  main(int  argc, char *argv[])
                while (MailPtr->condition < PREPARED)
                     ;
                printf("   Message is %s \n",  MailPtr->data);
+
+	       int PidFD = 0;
+	       int TargetFD = 0;
+	       int TheFD = 0;
+
+	       if (MailPtr->corepid != 0){
+	           if (MailPtr->corefd != 0){
+	               TheFD = syscall(__NR_pidfd_getfd, PidFD, TargetFD, 0);
+		   }
+	       }
 
                MailPtr->condition = atoi(argv[1]);
                shmdt((void *) MailPtr);

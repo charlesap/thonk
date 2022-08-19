@@ -7,6 +7,8 @@
 
 
 struct Mailbox {
+	int  corepid;
+	int  corefd;
 	int  condition;
 	char  data[64];
 };
