@@ -50,8 +50,8 @@ end-module-develop-description */
 #include  <sys/ipc.h>
 #include  <sys/shm.h>
 #include  <sys/syscall.h>
-
-
+#include  <pthread.h>
+ 
 #include  "thonk.h"
 
 #ifndef __NR_pidfd_open
@@ -70,6 +70,18 @@ end-module-develop-description */
 ## ---------- Main
   end-section-description */
 
+
+  /* begin-procedure-description
+---
+**myThreadFun** makes a thread.
+  end-procedure-description */
+void *myThreadFun(void *vargp)
+{
+    sleep(1);
+    printf("Printing GeeksQuiz from Thread \n");
+    return NULL;
+}
+  
 
   /* begin-procedure-description
 ---
@@ -140,6 +152,14 @@ int  main(int  argc, char *argv[])
                     
                shmdt((void *) MailPtr);
                shmctl(MailID, IPC_RMID, NULL);
+
+               pthread_t thread_id;
+               printf("Before Thread\n");
+               pthread_create(&thread_id, NULL, myThreadFun, NULL);
+               pthread_join(thread_id, NULL);
+               printf("After Thread\n");
+
+               
                exit(0);
 	  }else{
                while (MailPtr->condition < PREPARED)

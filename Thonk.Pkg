@@ -1,0 +1,7 @@
+k,v1,v2
+package,Thonk,v1.0.20220819
+from,github.com/charlesap,whenever
+license,MIT,CP
+doc,suplib, provide a core framework for integration.
+p,thonk.c,
+p,thonk.h,
