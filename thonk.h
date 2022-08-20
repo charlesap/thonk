@@ -4,7 +4,7 @@
 #define  READ1      1
 #define  READ2      2
 #define  READ3      3
-
+#define  MAXTHREADS 32
 
 struct Mailbox {
 	int  corepid;

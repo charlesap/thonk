@@ -79,7 +79,7 @@ end-module-develop-description */
 void *myThreadFun(void *vargp)
 {
     sleep(1);
-    printf("Printing GeeksQuiz from Thread \n");
+    printf("In Thread \n");
     return NULL;
 }
   
@@ -97,6 +97,8 @@ int  main(int  argc, char *argv[])
      struct stat st = {0};
      const char *homedir;
      char thonkdir[256];
+     pthread_t worker[MAXTHREADS];
+     int workers = 0;
 
      struct passwd *p = getpwuid(getuid());  // Check for NULL!
 
@@ -154,15 +156,26 @@ int  main(int  argc, char *argv[])
                shmdt((void *) MailPtr);
                shmctl(MailID, IPC_RMID, NULL);
 
+	       workers = get_nprocs();
+	       if (workers > MAXTHREADS) workers = MAXTHREADS;
+
                printf("This system has %d processors configured and "
                       "%d processors available.\n",
                       get_nprocs_conf(), get_nprocs());
 
-               pthread_t thread_id;
-               printf("Before Thread\n");
-               pthread_create(&thread_id, NULL, myThreadFun, NULL);
-               pthread_join(thread_id, NULL);
-               printf("After Thread\n");
+               printf("Before Threads\n");
+               for (int i = 0; i < workers; i++ ){
+                      pthread_create(&worker[i], NULL, myThreadFun, NULL);
+
+	       }
+               for (int i = 0; i < workers; i++ ){
+                      pthread_join(worker[i],NULL);
+
+	       }
+               //pthread_t thread_id;
+               //pthread_create(&thread_id, NULL, myThreadFun, NULL);
+               //pthread_join(thread_id, NULL);
+               printf("After Threads\n");
 
                
                exit(0);
