@@ -50,6 +50,7 @@ end-module-develop-description */
 #include  <sys/ipc.h>
 #include  <sys/shm.h>
 #include  <sys/syscall.h>
+#include  <sys/sysinfo.h>
 #include  <pthread.h>
  
 #include  "thonk.h"
@@ -152,6 +153,10 @@ int  main(int  argc, char *argv[])
                     
                shmdt((void *) MailPtr);
                shmctl(MailID, IPC_RMID, NULL);
+
+               printf("This system has %d processors configured and "
+                      "%d processors available.\n",
+                      get_nprocs_conf(), get_nprocs());
 
                pthread_t thread_id;
                printf("Before Thread\n");
