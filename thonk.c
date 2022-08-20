@@ -1,3 +1,38 @@
+/* begin-package-description
+
+**Package Overview**
+
+Thonk...
+
+
+**Package Usage**
+
+To...
+
+
+end-package-description */
+
+/* begin-module-short-description
+implements a ...
+end-module-short-description */
+
+/* begin-module-use-description
+
+Module OXP reads the source code of an Oberon program and produces an executable binary module.
+
+end-module-use-description */
+/* begin-module-develop-description
+
+(C. Perkins 2022)
+
+**thonk** implements...
+
+The structure... 
+
+end-module-develop-description */
+
+
+
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
@@ -29,6 +64,17 @@
 //    int return syscall(__NR_pidfd_open, pid, flags);
 //    int return syscall(__NR_pidfd_getfd, pidfd, getfd, flags);
 
+
+
+/* begin-section-description
+## ---------- Main
+  end-section-description */
+
+
+  /* begin-procedure-description
+---
+**main** begins...
+  end-procedure-description */
 int  main(int  argc, char *argv[])
 {
      bool first = false;
