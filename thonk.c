@@ -100,10 +100,7 @@ int  main(int  argc, char *argv[])
      pthread_t worker[MAXTHREADS];
      int workers = 0;
 
-     struct passwd *p = getpwuid(getuid());  // Check for NULL!
-
-     
-
+     struct passwd *p = getpwuid(getuid());
      if (p != 0){
           printf("User Name: %s\n", p->pw_name);     
           if ((homedir = getenv("HOME")) == NULL) {
@@ -114,11 +111,6 @@ int  main(int  argc, char *argv[])
 
           if (stat(thonkdir, &st) == -1) {
 	      mkdir(thonkdir, 0700);
-          }
-
-          if (argc != 2) {
-               printf("Use: %s <\"message\"|number>\n", argv[0]);
-               exit(1);
           }
 
           MailKey = ftok(thonkdir, SHKVAL);
@@ -142,60 +134,71 @@ int  main(int  argc, char *argv[])
           
 	  if (first) {
 
-               MailPtr->condition  = UNPREPARED;
-               MailPtr->corepid  = 0;
-               MailPtr->corefd  = 0;
-               strncpy(MailPtr->data, argv[1], 63);
-               MailPtr->data[63] = '\0';
-               MailPtr->condition = PREPARED;
-               printf("Ready for connections.\n");
-                           
-               while (MailPtr->condition < READ3)
-                    sleep(1);
-                    
-               shmdt((void *) MailPtr);
-               shmctl(MailID, IPC_RMID, NULL);
+               if (argc != 2) {
+                    printf("Use: %s \"message\"\n", argv[0]);
+                    exit(1);
+               }else{
 
-	       workers = get_nprocs();
-	       if (workers > MAXTHREADS) workers = MAXTHREADS;
-
-               printf("This system has %d processors configured and "
-                      "%d processors available.\n",
-                      get_nprocs_conf(), get_nprocs());
-
-               printf("Before Threads\n");
-               for (int i = 0; i < workers; i++ ){
-                      pthread_create(&worker[i], NULL, myThreadFun, NULL);
-
-	       }
-               for (int i = 0; i < workers; i++ ){
-                      pthread_join(worker[i],NULL);
-
-	       }
-               //pthread_t thread_id;
-               //pthread_create(&thread_id, NULL, myThreadFun, NULL);
-               //pthread_join(thread_id, NULL);
-               printf("After Threads\n");
-
+                    MailPtr->condition  = UNPREPARED;
+                    MailPtr->corepid  = 0;
+                    MailPtr->corefd  = 0;
+                    strncpy(MailPtr->data, argv[1], 63);
+                    MailPtr->data[63] = '\0';
+                    MailPtr->condition = PREPARED;
+                    printf("Ready for connections.\n");
+                                
+                    while (MailPtr->condition < READ3)
+                         sleep(1);
+                         
+                    shmdt((void *) MailPtr);
+                    shmctl(MailID, IPC_RMID, NULL);
                
-               exit(0);
+	            workers = get_nprocs();
+	            if (workers > MAXTHREADS) workers = MAXTHREADS;
+               
+                    printf("This system has %d processors configured and "
+                           "%d processors available.\n",
+                           get_nprocs_conf(), get_nprocs());
+               
+                    printf("Before Threads\n");
+                    for (int i = 0; i < workers; i++ ){
+                           pthread_create(&worker[i], NULL, myThreadFun, NULL);
+               
+	            }
+                    for (int i = 0; i < workers; i++ ){
+                           pthread_join(worker[i],NULL);
+               
+	            }
+                    //pthread_t thread_id;
+                    //pthread_create(&thread_id, NULL, myThreadFun, NULL);
+                    //pthread_join(thread_id, NULL);
+                    printf("After Threads\n");
+               
+	            }
+                    exit(0);
 	  }else{
-               while (MailPtr->condition < PREPARED)
-                    ;
-               printf("   Message is %s \n",  MailPtr->data);
+               if (argc != 2) {
+                    printf("Use: %s number\n", argv[0]);
+                    exit(1);
+               }else{
 
-	       int PidFD = 0;
-	       int TargetFD = 0;
-	       int TheFD = 0;
-
-	       if (MailPtr->corepid != 0){
-	           if (MailPtr->corefd != 0){
-	               TheFD = syscall(__NR_pidfd_getfd, PidFD, TargetFD, 0);
-		   }
+                    while (MailPtr->condition < PREPARED)
+                         ;
+                    printf("   Message is %s \n",  MailPtr->data);
+               
+	            int PidFD = 0;
+	            int TargetFD = 0;
+	            int TheFD = 0;
+               
+	            if (MailPtr->corepid != 0){
+	                if (MailPtr->corefd != 0){
+	                    TheFD = syscall(__NR_pidfd_getfd, PidFD, TargetFD, 0);
+	                }
+	            }
+               
+                    MailPtr->condition = atoi(argv[1]);
+                    shmdt((void *) MailPtr);
 	       }
-
-               MailPtr->condition = atoi(argv[1]);
-               shmdt((void *) MailPtr);
                exit(0);
 
 	  }
