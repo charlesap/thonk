@@ -85,6 +85,60 @@ void *myThreadFun(void *vargp)
 
 /* begin-procedure-description
 ---
+**server** accepts client connections via shared memory and ipc
+  end-procedure-description */
+void  server(int  argc, char *argv[], struct Mailbox *MailPtr, int MailID)
+{
+     pthread_t worker[MAXTHREADS];
+     int workers = 0;
+     
+     if (argc != 2) {
+          printf("Use: %s \"message\"\n", argv[0]);
+          exit(1);
+     }else{
+
+          MailPtr->condition  = UNPREPARED;
+          MailPtr->corepid  = 0;
+          MailPtr->corefd  = 0;
+          strncpy(MailPtr->data, argv[1], 63);
+          MailPtr->data[63] = '\0';
+          MailPtr->condition = PREPARED;
+          printf("Ready for connections.\n");
+                      
+          while (MailPtr->condition < READ3)
+               sleep(1);
+               
+          shmdt((void *) MailPtr);
+          shmctl(MailID, IPC_RMID, NULL);
+     
+          workers = get_nprocs();
+          if (workers > MAXTHREADS) workers = MAXTHREADS;
+     
+          printf("This system has %d processors configured and "
+                 "%d processors available.\n",
+                 get_nprocs_conf(), get_nprocs());
+     
+          printf("Before Threads\n");
+          for (int i = 0; i < workers; i++ ){
+                 pthread_create(&worker[i], NULL, myThreadFun, NULL);
+     
+          }
+          for (int i = 0; i < workers; i++ ){
+                 pthread_join(worker[i],NULL);
+     
+          }
+          //pthread_t thread_id;
+          //pthread_create(&thread_id, NULL, myThreadFun, NULL);
+          //pthread_join(thread_id, NULL);
+          printf("After Threads\n");
+     
+     }
+     exit(0);
+}
+
+
+/* begin-procedure-description
+---
 **client** connects to the server via shared memory and ipc
   end-procedure-description */
 void  client(int  argc, char *argv[], struct Mailbox *MailPtr)
@@ -130,8 +184,6 @@ int  main(int  argc, char *argv[])
      struct stat st = {0};
      const char *homedir;
      char thonkdir[256];
-     pthread_t worker[MAXTHREADS];
-     int workers = 0;
 
      struct passwd *p = getpwuid(getuid());
      if (p != 0){
@@ -166,49 +218,8 @@ int  main(int  argc, char *argv[])
           }
           
 	  if (first) {
+		server(argc,argv,MailPtr,MailID);
 
-               if (argc != 2) {
-                    printf("Use: %s \"message\"\n", argv[0]);
-                    exit(1);
-               }else{
-
-                    MailPtr->condition  = UNPREPARED;
-                    MailPtr->corepid  = 0;
-                    MailPtr->corefd  = 0;
-                    strncpy(MailPtr->data, argv[1], 63);
-                    MailPtr->data[63] = '\0';
-                    MailPtr->condition = PREPARED;
-                    printf("Ready for connections.\n");
-                                
-                    while (MailPtr->condition < READ3)
-                         sleep(1);
-                         
-                    shmdt((void *) MailPtr);
-                    shmctl(MailID, IPC_RMID, NULL);
-               
-	            workers = get_nprocs();
-	            if (workers > MAXTHREADS) workers = MAXTHREADS;
-               
-                    printf("This system has %d processors configured and "
-                           "%d processors available.\n",
-                           get_nprocs_conf(), get_nprocs());
-               
-                    printf("Before Threads\n");
-                    for (int i = 0; i < workers; i++ ){
-                           pthread_create(&worker[i], NULL, myThreadFun, NULL);
-               
-	            }
-                    for (int i = 0; i < workers; i++ ){
-                           pthread_join(worker[i],NULL);
-               
-	            }
-                    //pthread_t thread_id;
-                    //pthread_create(&thread_id, NULL, myThreadFun, NULL);
-                    //pthread_join(thread_id, NULL);
-                    printf("After Threads\n");
-               
-	            }
-                    exit(0);
 	  }else{
 		client(argc,argv,MailPtr);
 
