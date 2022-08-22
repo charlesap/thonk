@@ -82,7 +82,40 @@ void *myThreadFun(void *vargp)
     printf("In Thread \n");
     return NULL;
 }
+
+/* begin-procedure-description
+---
+**client** connects to the server via shared memory and ipc
+  end-procedure-description */
+void  client(int  argc, char *argv[], struct Mailbox *MailPtr)
+{
+     
+
+     if (argc != 2) {
+          printf("Use: %s number\n", argv[0]);
+          exit(1);
+     }else{
+
+          while (MailPtr->condition < PREPARED)
+               ;
+          printf("   Message is %s \n",  MailPtr->data);
+     
+          int PidFD = 0;
+          int TargetFD = 0;
+          int TheFD = 0;
+     
+          if (MailPtr->corepid != 0){
+              if (MailPtr->corefd != 0){
+                  TheFD = syscall(__NR_pidfd_getfd, PidFD, TargetFD, 0);
+              }
+          }
+     
+          MailPtr->condition = atoi(argv[1]);
+          shmdt((void *) MailPtr);
+     }
+     exit(0);
   
+}
 
   /* begin-procedure-description
 ---
@@ -177,29 +210,7 @@ int  main(int  argc, char *argv[])
 	            }
                     exit(0);
 	  }else{
-               if (argc != 2) {
-                    printf("Use: %s number\n", argv[0]);
-                    exit(1);
-               }else{
-
-                    while (MailPtr->condition < PREPARED)
-                         ;
-                    printf("   Message is %s \n",  MailPtr->data);
-               
-	            int PidFD = 0;
-	            int TargetFD = 0;
-	            int TheFD = 0;
-               
-	            if (MailPtr->corepid != 0){
-	                if (MailPtr->corefd != 0){
-	                    TheFD = syscall(__NR_pidfd_getfd, PidFD, TargetFD, 0);
-	                }
-	            }
-               
-                    MailPtr->condition = atoi(argv[1]);
-                    shmdt((void *) MailPtr);
-	       }
-               exit(0);
+		client(argc,argv,MailPtr);
 
 	  }
      }
