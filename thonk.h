@@ -12,3 +12,8 @@ struct Mailbox {
 	int  condition;
 	char  data[64];
 };
+
+struct MailFrame {
+	struct Mailbox * box;
+	int id;
+};
