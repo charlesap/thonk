@@ -71,8 +71,8 @@ end-module-develop-description */
 ## ---------- Global Variables
   end-section-description */
 
-struct Mailbox * MailPtr;
-int MailID;
+//struct Mailbox * MailPtr;
+//int MailID;
 
 /* begin-section-description
 ## ---------- Utility Functions
@@ -99,7 +99,7 @@ void *myThreadFun(void *vargp)
 ---
 **server** accepts client connections via shared memory and ipc
   end-procedure-description */
-void  server(int  argc, char *argv[])
+void  server(int  argc, char *argv[], struct MailFrame * frame)
 {
      pthread_t worker[MAXTHREADS];
      int workers = 0;
@@ -110,15 +110,15 @@ void  server(int  argc, char *argv[])
 	  ERRVAL = 1;
      }else{
 
-          MailPtr->condition  = UNPREPARED;
-          MailPtr->corepid  = 0;
-          MailPtr->corefd  = 0;
-          strncpy(MailPtr->data, argv[1], 63);
-          MailPtr->data[63] = '\0';
-          MailPtr->condition = PREPARED;
+          frame->box->condition  = UNPREPARED;
+          frame->box->corepid  = 0;
+          frame->box->corefd  = 0;
+          strncpy(frame->box->data, argv[1], 63);
+          frame->box->data[63] = '\0';
+          frame->box->condition = PREPARED;
           printf("Ready for connections.\n");
                       
-          while (MailPtr->condition < READ3)
+          while (frame->box->condition < READ3)
                sleep(1);
                
      
@@ -144,8 +144,8 @@ void  server(int  argc, char *argv[])
           printf("After Threads\n");
      
      }
-     shmdt((void *) MailPtr);
-     shmctl(MailID, IPC_RMID, NULL);
+     shmdt((void *) frame->box);
+     shmctl(frame->id, IPC_RMID, NULL);
      exit(ERRVAL);
 }
 
@@ -154,7 +154,7 @@ void  server(int  argc, char *argv[])
 ---
 **client** connects to the server via shared memory and ipc
   end-procedure-description */
-void  client(int  argc, char *argv[])
+void  client(int  argc, char *argv[], struct MailFrame * frame)
 {
      int ERRVAL = 0;
 
@@ -164,22 +164,22 @@ void  client(int  argc, char *argv[])
      }else{
 
           printf("Establishing connection.\n");
-          while (MailPtr->condition < PREPARED)
+          while (frame->box->condition < PREPARED)
                ;
-          printf("   Message is %s \n",  MailPtr->data);
+          printf("   Message is %s \n",  frame->box->data);
      
-          int PidFD = 0;
-          int TargetFD = 0;
-          int TheFD = 0;
+//          int PidFD = 0;
+//          int TargetFD = 0;
+//          int TheFD = 0;
      
-          if (MailPtr->corepid != 0){
-              if (MailPtr->corefd != 0){
-                  TheFD = syscall(__NR_pidfd_getfd, PidFD, TargetFD, 0);
-              }
-          }
+//          if (frame->box->corepid != 0){
+//              if (frame->box->corefd != 0){
+//                  TheFD = syscall(__NR_pidfd_getfd, PidFD, TargetFD, 0);
+//              }
+//          }
      }
-     MailPtr->condition = atoi(argv[1]);
-     shmdt((void *) MailPtr);
+     frame->box->condition = atoi(argv[1]);
+     shmdt((void *) frame->box);
      
      exit(ERRVAL);
   
@@ -189,12 +189,13 @@ void  client(int  argc, char *argv[])
 ---
 **setup** prepares the mailbox
   end-procedure-description */
-void setup(int  argc, char *argv[], struct passwd *p, bool * first)
+void setup(int  argc, char *argv[], struct passwd *p, bool * first, struct MailFrame *frame)
 {
      struct stat st = {0};
      const char *homedir;
      char thonkdir[256];
      key_t MailKey;
+     
      
      
      printf("User Name: %s\n", p->pw_name);     
@@ -211,24 +212,26 @@ void setup(int  argc, char *argv[], struct passwd *p, bool * first)
 
      MailKey = ftok(thonkdir, SHKVAL);
 
-     MailID = shmget(MailKey, sizeof(struct Mailbox), 0666);
-     if (MailID < 0) {
+     frame->id = shmget(MailKey, sizeof(struct Mailbox), 0666);
+     if (frame->id < 0) {
+          printf("first\n");
           *first = true;	  
      
-          MailID = shmget(MailKey, sizeof(struct Mailbox), IPC_CREAT | 0666);
-          if (MailID < 0) {
+          frame->id = shmget(MailKey, sizeof(struct Mailbox), IPC_CREAT | 0666);
+          if (frame->id < 0) {
                printf("ERROR: Unable to establish shared memory\n");
                exit(1);
           }
+     }else{
+          printf("not first\n");
      }
      
-     MailPtr = (struct Mailbox *) shmat(MailID, NULL, 0);
-     if ((int64_t) MailPtr == -1) {
+     frame->box = (struct Mailbox *) shmat(frame->id, NULL, 0);
+     if ((int64_t) frame->box == -1) {
           printf("ERROR: Unable to establish mailbox\n");
           exit(1);
      }
 
-     
 }
 
   /* begin-procedure-description
@@ -237,18 +240,20 @@ void setup(int  argc, char *argv[], struct passwd *p, bool * first)
   end-procedure-description */
 int  main(int  argc, char *argv[])
 {
+     struct MailFrame frame;
      bool first = false;
+     
 
      struct passwd *p = getpwuid(getuid());
      if (p != 0){
 
-          setup(argc,argv,p,&first);
+          setup(argc,argv,p,&first,&frame);
 	     
 	  if (first) {
-		server(argc,argv);
+		server(argc,argv,&frame);
 
 	  }else{
-		client(argc,argv);
+		client(argc,argv,&frame);
 	  }
      }
 }
