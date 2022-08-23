@@ -5,6 +5,7 @@
 #define  READ2      2
 #define  READ3      3
 #define  MAXTHREADS 32
+#define  THREAD_STACK_SIZE 16384
 
 struct Mailbox {
 	int  corepid;

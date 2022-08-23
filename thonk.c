@@ -79,14 +79,48 @@ end-module-develop-description */
   end-section-description */
 
 
+
+  /* begin-procedure-description
+---
+**sigsegv_handler** handles segmentation faults from reading the protected page at the base of the thread's stack.
+  end-procedure-description */
+void sigsegv_handler(int signum, siginfo_t *info, void *data) {
+//    void *addr = info->si_addr;
+//    int info = coro_t::in_coro_from_cpu(addr);
+//    if (cpu == -1) {
+//        crash("Segmentation fault from reading the address %p.", addr);
+//    } else {
+//        crash("Callstack overflow from a coroutine initialized on CPU %d at address %p.", cpu, addr);
+//    }
+    printf("Segmentation Fault Not Really Handled.\n");
+    exit(1);
+}
+
   /* begin-procedure-description
 ---
 **myThreadFun** makes a thread.
   end-procedure-description */
 void *myThreadFun(void *vargp)
 {
+    int psz = getpagesize();
+    void *stack = valloc(psz+THREAD_STACK_SIZE);
+    mprotect(stack, psz, PROT_NONE);
+
+    struct sigaction action;
+    bzero(&action, sizeof(action));
+    action.sa_flags = SA_SIGINFO|SA_STACK;
+    action.sa_sigaction = &sigsegv_handler;
+    sigaction(SIGSEGV, &action, NULL);
+    
     sleep(1);
     printf("In Thread \n");
+
+    char * foo = stack;
+
+    foo[0]=0;
+    
+    mprotect(stack, psz, PROT_READ|PROT_WRITE);
+    free(stack);
     return NULL;
 }
 
