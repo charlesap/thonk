@@ -96,6 +96,14 @@ void sigsegv_handler(int signum, siginfo_t *info, void *data) {
     exit(1);
 }
 
+
+struct thread_args {
+    char* name;
+    int age;
+};
+
+
+
   /* begin-procedure-description
 ---
 **myThreadFun** makes a thread.
@@ -105,16 +113,27 @@ void *myThreadFun(void *vargp)
     int psz = getpagesize();
     void *stack = valloc(psz+THREAD_STACK_SIZE);
     mprotect(stack, psz, PROT_NONE);
-
+    struct thread_args * tha;
     struct sigaction action;
+
     bzero(&action, sizeof(action));
     action.sa_flags = SA_SIGINFO|SA_STACK;
     action.sa_sigaction = &sigsegv_handler;
     sigaction(SIGSEGV, &action, NULL);
-    
-    sleep(1);
-    printf("In Thread \n");
+ 
+    stack_t segv_stack;
+    segv_stack.ss_sp = valloc(SEGV_STACK_SIZE);
+    segv_stack.ss_flags = 0;
+    segv_stack.ss_size = SEGV_STACK_SIZE;
+    sigaltstack(&segv_stack, NULL);
 
+
+
+
+    tha=(struct thread_args*)vargp;
+
+    sleep(1);
+    printf("In Thread %s\n", tha->name);
  //   char * foo = stack;
  //   foo[0]=0;   /* cause a fault */
     
@@ -135,6 +154,10 @@ void *myThreadFun(void *vargp)
 void  server(int  argc, char *argv[], struct MailFrame * frame)
 {
      pthread_t worker[MAXTHREADS];
+     struct thread_args wargs[MAXTHREADS];
+
+     char * astring = "placeholder";
+
      int workers = 0;
      int ERRVAL = 0;
      
@@ -164,7 +187,9 @@ void  server(int  argc, char *argv[], struct MailFrame * frame)
      
           printf("Before Threads\n");
           for (int i = 0; i < workers; i++ ){
-                 pthread_create(&worker[i], NULL, myThreadFun, NULL);
+		 wargs[i].name = astring;
+		 wargs[i].age=42;
+                 pthread_create(&worker[i], NULL, myThreadFun, (void *)&wargs[i]);
      
           }
           for (int i = 0; i < workers; i++ ){
