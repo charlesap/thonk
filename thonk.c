@@ -115,9 +115,8 @@ void *myThreadFun(void *vargp)
     sleep(1);
     printf("In Thread \n");
 
-    char * foo = stack;
-
-    foo[0]=0;
+ //   char * foo = stack;
+ //   foo[0]=0;   /* cause a fault */
     
     mprotect(stack, psz, PROT_READ|PROT_WRITE);
     free(stack);
