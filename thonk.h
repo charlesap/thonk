@@ -8,6 +8,8 @@
 #define  MAXTHREADS 32
 #define  THREAD_STACK_SIZE 16384
 #define  SEGV_STACK_SIZE 4096
+#define  PAGE_SIZE 4096
+#define  STK_SIZE (10 * PAGE_SIZE)
 
 struct Mailbox {
 	int  corepid;

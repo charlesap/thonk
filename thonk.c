@@ -99,7 +99,8 @@ void sigsegv_handler(int signum, siginfo_t *info, void *data) {
 
 struct thread_args {
     char* name;
-    int age;
+    void* stack;
+    pthread_attr_t attr;
 };
 
 
@@ -164,6 +165,7 @@ void  server(int  argc, char *argv[], struct MailFrame * frame)
      if (argc != 2) {
           printf("Use: %s \"message\"\n", argv[0]);
 	  ERRVAL = 1;
+
      }else{
 
           frame->box->condition  = UNPREPARED;
@@ -184,12 +186,18 @@ void  server(int  argc, char *argv[], struct MailFrame * frame)
           printf("This system has %d processors configured and "
                  "%d processors available.\n",
                  get_nprocs_conf(), get_nprocs());
-     
+
+#define PAGE_SIZE 4096
+#define STK_SIZE (10 * PAGE_SIZE)
+
           printf("Before Threads\n");
           for (int i = 0; i < workers; i++ ){
 		 wargs[i].name = astring;
-		 wargs[i].age=42;
-                 pthread_create(&worker[i], NULL, myThreadFun, (void *)&wargs[i]);
+                 pthread_attr_t * pttr = &wargs[1].attr;
+	  	 pthread_attr_init(pttr);
+	  	 pthread_attr_setstacksize(pttr,STK_SIZE);
+
+		 pthread_create(&worker[i], pttr, myThreadFun, (void *)&wargs[i]);
      
           }
           for (int i = 0; i < workers; i++ ){
@@ -202,8 +210,10 @@ void  server(int  argc, char *argv[], struct MailFrame * frame)
           printf("After Threads\n");
      
      }
+
      shmdt((void *) frame->box);
      shmctl(frame->id, IPC_RMID, NULL);
+
      exit(ERRVAL);
 }
 
