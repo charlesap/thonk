@@ -17,58 +17,22 @@ The structure...
 
 end-module-develop-description */
 
-
-
-//#include <fcntl.h>
-//#include <sys/mman.h>
-//#include <sys/wait.h>
-
-
-
 #include  <stdio.h>
 #include  <stdlib.h>
-//#include  <sys/stat.h>
-//#include  <unistd.h>
-//#include  <string.h>
-//#include  <stdbool.h>
-//#include  <pwd.h>
-//#include  <sys/types.h>
-//#include  <sys/ipc.h>
-//#include  <sys/shm.h>
-//#include  <sys/syscall.h>
-//#include  <sys/sysinfo.h>
 #include  <pthread.h>
  
 #include  "thonk.h"
 
-//#ifndef __NR_pidfd_open
-//#define __NR_pidfd_open 434   /* System call # on most architectures */
-//#endif
-//#ifndef __NR_pidfd_getfd
-//#define __NR_pidfd_getfd 438   /* System call # on most architectures */
-//#endif
-
-//    int return syscall(__NR_pidfd_open, pid, flags);
-//    int return syscall(__NR_pidfd_getfd, pidfd, getfd, flags);
-
-
-
-/* begin-section-description
-## ---------- Global Variables
-  end-section-description */
-
-//struct Mailbox * MailPtr;
-//int MailID;
 
 /* begin-section-description
 ## ---------- Utility Functions
   end-section-description */
 
 
-
-
-	
-	
+  /* begin-procedure-description
+---
+**display_pthread_attr** outputs the pthread attr structure contents.
+  end-procedure-description */
 void display_pthread_attr(pthread_attr_t *attr, char *prefix)
 {
     int s, i;
