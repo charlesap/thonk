@@ -11,6 +11,8 @@
 #define  PAGE_SIZE 4096
 #define  STK_SIZE (10 * PAGE_SIZE)
 
+
+
 struct Mailbox {
 	int  corepid;
 	int  corefd;
@@ -22,3 +24,9 @@ struct MailFrame {
 	struct Mailbox * box;
 	int id;
 };
+
+#define handle_error_en(en, msg) \
+        do { perror(msg); exit(EXIT_FAILURE); } while (0)
+
+void display_pthread_attr(pthread_attr_t *attr, char *prefix);
+
