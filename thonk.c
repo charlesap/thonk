@@ -104,6 +104,68 @@ struct thread_args {
 };
 
 
+#define handle_error_en(en, msg) \
+        do { perror(msg); exit(EXIT_FAILURE); } while (0)
+	
+	
+static void
+display_pthread_attr(pthread_attr_t *attr, char *prefix)
+{
+    int s, i;
+    size_t v;
+    void *stkaddr;
+    struct sched_param sp;
+
+   s = pthread_attr_getdetachstate(attr, &i);
+    if (s != 0)
+        handle_error_en(s, "pthread_attr_getdetachstate");
+    printf("%sDetach state        = %s\n", prefix,
+            (i == PTHREAD_CREATE_DETACHED) ? "PTHREAD_CREATE_DETACHED" :
+            (i == PTHREAD_CREATE_JOINABLE) ? "PTHREAD_CREATE_JOINABLE" :
+            "???");
+
+   s = pthread_attr_getscope(attr, &i);
+    if (s != 0)
+        handle_error_en(s, "pthread_attr_getscope");
+    printf("%sScope               = %s\n", prefix,
+            (i == PTHREAD_SCOPE_SYSTEM)  ? "PTHREAD_SCOPE_SYSTEM" :
+            (i == PTHREAD_SCOPE_PROCESS) ? "PTHREAD_SCOPE_PROCESS" :
+            "???");
+
+   s = pthread_attr_getinheritsched(attr, &i);
+    if (s != 0)
+        handle_error_en(s, "pthread_attr_getinheritsched");
+    printf("%sInherit scheduler   = %s\n", prefix,
+            (i == PTHREAD_INHERIT_SCHED)  ? "PTHREAD_INHERIT_SCHED" :
+            (i == PTHREAD_EXPLICIT_SCHED) ? "PTHREAD_EXPLICIT_SCHED" :
+            "???");
+
+   s = pthread_attr_getschedpolicy(attr, &i);
+    if (s != 0)
+        handle_error_en(s, "pthread_attr_getschedpolicy");
+    printf("%sScheduling policy   = %s\n", prefix,
+            (i == SCHED_OTHER) ? "SCHED_OTHER" :
+            (i == SCHED_FIFO)  ? "SCHED_FIFO" :
+            (i == SCHED_RR)    ? "SCHED_RR" :
+            "???");
+
+   s = pthread_attr_getschedparam(attr, &sp);
+    if (s != 0)
+        handle_error_en(s, "pthread_attr_getschedparam");
+    printf("%sScheduling priority = %d\n", prefix, sp.sched_priority);
+
+   s = pthread_attr_getguardsize(attr, &v);
+    if (s != 0)
+        handle_error_en(s, "pthread_attr_getguardsize");
+    printf("%sGuard size          = %ld bytes\n", prefix, v);
+
+   s = pthread_attr_getstack(attr, &stkaddr, &v);
+    if (s != 0)
+        handle_error_en(s, "pthread_attr_getstack");
+    printf("%sStack address       = %p\n", prefix, stkaddr);
+    printf("%sStack size          = 0x%lx bytes\n", prefix, v);
+}
+
 
   /* begin-procedure-description
 ---
@@ -111,11 +173,20 @@ struct thread_args {
   end-procedure-description */
 void *myThreadFun(void *vargp)
 {
+    struct thread_args * tha = (struct thread_args*)vargp;
     int psz = getpagesize();
-    void *stack = valloc(psz+THREAD_STACK_SIZE);
-    mprotect(stack, psz, PROT_NONE);
-    struct thread_args * tha;
+    size_t ssz; 
+    void * stack;
     struct sigaction action;
+
+    pthread_attr_t * pttr = &tha->attr;
+
+//   printf("In Thread attributes:\n");
+//    display_pthread_attr(pttr, "\t");
+
+    pthread_attr_getstack(pttr,&stack,&ssz);
+
+    mprotect(stack, psz, PROT_NONE);
 
     bzero(&action, sizeof(action));
     action.sa_flags = SA_SIGINFO|SA_STACK;
@@ -129,17 +200,13 @@ void *myThreadFun(void *vargp)
     sigaltstack(&segv_stack, NULL);
 
 
-
-
-    tha=(struct thread_args*)vargp;
-
-    sleep(1);
-    printf("In Thread %s\n", tha->name);
+    sleep(.1);
+    printf("In Thread %s stack at %p \n", tha->name, stack);
  //   char * foo = stack;
  //   foo[0]=0;   /* cause a fault */
     
     mprotect(stack, psz, PROT_READ|PROT_WRITE);
-    free(stack);
+//    free(stack);
     return NULL;
 }
 
@@ -187,16 +254,26 @@ void  server(int  argc, char *argv[], struct MailFrame * frame)
                  "%d processors available.\n",
                  get_nprocs_conf(), get_nprocs());
 
-#define PAGE_SIZE 4096
-#define STK_SIZE (10 * PAGE_SIZE)
-
           printf("Before Threads\n");
           for (int i = 0; i < workers; i++ ){
-		 wargs[i].name = astring;
-                 pthread_attr_t * pttr = &wargs[1].attr;
-	  	 pthread_attr_init(pttr);
-	  	 pthread_attr_setstacksize(pttr,STK_SIZE);
+		 struct thread_args * targs = &wargs[i];
+		 targs->name = astring;
+                 pthread_attr_t * pttr = &targs->attr;
+	  	 int s = pthread_attr_init(pttr);
 
+		 void * sp;
+                 if (s != 0)
+          	     handle_error_en(s, "pthread_attr_init");
+
+	         s = posix_memalign(&sp, sysconf(_SC_PAGESIZE), STK_SIZE);
+	         if (s != 0)
+                         handle_error_en(s, "posix_memalign");
+  	          	 
+	         s = pthread_attr_setstack(pttr, sp, STK_SIZE);
+	         if (s != 0)
+                     handle_error_en(s, "pthread_attr_setstack");
+
+    		 printf("Preparing Thread %s stack at %p \n", wargs[i].name, sp);
 		 pthread_create(&worker[i], pttr, myThreadFun, (void *)&wargs[i]);
      
           }
@@ -204,9 +281,6 @@ void  server(int  argc, char *argv[], struct MailFrame * frame)
                  pthread_join(worker[i],NULL);
      
           }
-          //pthread_t thread_id;
-          //pthread_create(&thread_id, NULL, myThreadFun, NULL);
-          //pthread_join(thread_id, NULL);
           printf("After Threads\n");
      
      }
